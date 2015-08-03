@@ -1,0 +1,41 @@
+package packageOne;
+
+import java.awt.BorderLayout;
+import java.awt.event.*;
+import javax.swing.*;
+
+public class DialogCheckInRV extends DialogCheckInAbstract implements
+                                                      ActionListener{
+	protected JTextField txtPower;
+	protected JLabel lblPower;
+	
+	public DialogCheckInRV(JFrame parent){
+		//calls the super classes constructor to create all the basic
+		//information to gather Sites data.
+		super(parent);
+		super.txtAdditional = new JTextField("30");
+		super.lblAdditional = new JLabel("Amps Required:");
+		super.textPanel.add(lblAdditional);
+		super.textPanel.add(txtAdditional);
+		super.getContentPane().add(textPanel, BorderLayout.CENTER);
+		super.okButton.addActionListener(this);
+		super.cancelButton.addActionListener(this);
+		setSize(300,300);
+		setVisible(true);
+	}
+	public String getSiteType(){
+		return "RV";
+	}
+	
+	public void actionPerformed(ActionEvent event) {
+		if(event.getSource() == okButton){
+			try{
+				super.okayButton();
+			}
+			catch (Exception e){
+			}
+		}
+		dispose();
+	}  
+}
+
