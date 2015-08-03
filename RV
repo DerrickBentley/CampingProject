@@ -1,0 +1,48 @@
+package packageOne;
+
+import java.util.Date;
+import java.util.GregorianCalendar;
+
+public class RV extends Site {
+	private static final long serialVersionUID = 1L;
+	/**Represents the power supplied to the campsite. */
+	private int power; //30, 60, or 90 amps of service.
+
+	public RV(){
+		super();
+	}
+	public RV(String nameReserving, GregorianCalendar checkIn, int
+			daysStaying, GregorianCalendar checkOutOn, int siteNumber,
+			int power){
+		super(nameReserving, checkIn, daysStaying, checkOutOn,
+				siteNumber);
+		this.power = power;
+	}
+	/******************************************************************
+	 * Used at check in with estimated days staying to get an idea of
+	 * the cost the site will come out to.
+	 ******************************************************************/
+	@Override
+	public int getEstimatedCost(){
+		return super.RVCOST * super.daysStaying;
+	}
+	/******************************************************************
+	 * used on checkout and is the computed cost from the date they 
+	 * checked in and the actual date they are leaving.
+	 *****************************************************************/
+	@Override 
+	public int getCost(){
+		Date in = super.getCheckIn().getTime();
+		Date out = super.getCheckOutOn().getTime();
+		Long diff = out.getTime() - in.getTime();
+		int days = (int)(diff/(1000*60*60*24)+1);
+		return super.RVCOST*(int)days;
+	}
+	public int getPower() {
+		return power;
+	}
+
+	public void setPower(int power) {
+		this.power = power;
+	}
+}
