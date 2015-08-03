@@ -1,1 +1,268 @@
+package packageOne;
+
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.*;
+
+/**********************************************************************
+ * Creates Only a basic GUI that updates a Table from an engine, Has
+ * Dialog boxes that pop up that only accepts inputed values however 
+ * does no checking or validation and anything can be put into them.
+ * @author bentleyd
+ *********************************************************************/
+public class GUICampingReg extends JFrame implements ActionListener{
+	private static final long serialVersionUID = 1L;
+	private JFrame frame;
+	private JMenuBar menubar;
+	private JMenu file;
+	private JMenuItem close;
+	private JMenuItem openText;
+	private JMenuItem openSerial;
+	private JMenuItem saveText;
+	private JMenuItem saveSerial;
+	private JMenu checkingIn;
+	private JMenuItem checkInRV;
+	private JMenuItem checkInTent;
+	private JMenuItem checkingOut;
+	private JMenuItem checkOut;
+	private JMenu filter;
+	private JMenuItem filterName;
+	private JMenuItem filterDate;
+	private JMenuItem filterDays;
+	private JMenuItem filterSite;
+	private JMenuItem filterClear;
+	private JLabel filterLabel;
+	private JLabel sitesTaken;
+	private JMenuItem seeFuture;
+	private JFileChooser chooser = new JFileChooser();
+	/** to be used as the option chosen in the filerchooser */
+	private int returnVal;
+	/** is the GUIs table, representing the Engines information */
+	private JTable table;
+	/** all talking to the engine however, is through Control */
+	/** contains no actual instance of the engine */
+	private Control control;
+	
+	public static void main(String[] args){
+		new GUICampingReg();
+	}
+	public GUICampingReg(){
+		// sets up my GUI and all the file menus
+		frame = new JFrame("Camping Manager");
+		menubar = new JMenuBar();
+		frame.setJMenuBar(menubar);
+		file = new JMenu("file");
+		close = new JMenuItem("close");
+		openText = new JMenuItem("Open Text");
+		openSerial = new JMenuItem("Open Serial");
+		saveText = new JMenuItem("Save Text");
+		saveSerial = new JMenuItem("Save Serial");
+		file.add(openText);
+		openText.addActionListener(this);
+		file.add(saveText);
+		saveText.addActionListener(this);
+		file.add(openSerial);
+		openSerial.addActionListener(this);
+		file.add(saveSerial);
+		saveSerial.addActionListener(this);
+		file.add(close);
+		close.addActionListener(this);
+		seeFuture = new JMenuItem("Jump Forward");
+		seeFuture.addActionListener(this);
+		file.add(seeFuture);
+		menubar.add(file);
+		checkingIn = new JMenu("Checking In");
+		checkInRV = new JMenuItem("Check in RV site");
+		checkInTent = new JMenuItem("Check in Tent site");
+		checkingIn.add(checkInRV);
+		checkInRV.addActionListener(this);
+		checkingIn.add(checkInTent);
+		checkInTent.addActionListener(this);
+		menubar.add(checkingIn);
+		checkingOut = new JMenu("Checking Out");
+		checkOut = new JMenuItem("Check out site");
+		checkingOut.add(checkOut);
+		checkOut.addActionListener(this);
+		menubar.add(checkingOut);
+		/** filter section */
+		filter = new JMenu("Filters");
+		filterName = new JMenuItem("by Name");
+		filterDays = new JMenuItem("by Days");
+		filterDate = new JMenuItem("by Date");
+		filterSite = new JMenuItem("by Site");
+		filterClear = new JMenuItem("Clear Filters");
+		filter.add(filterName);
+		filterName.addActionListener(this);
+		filter.add(filterDate);
+		filterDate.addActionListener(this);
+		filter.add(filterDays);
+		filterDays.addActionListener(this);
+		filter.add(filterSite);
+		filterSite.addActionListener(this);
+		filter.add(filterClear);
+		filterClear.addActionListener(this);
+		menubar.add(filter);
+		/**tells if the table is filtered */
+		filterLabel = new JLabel("Filtered         ");
+		filterLabel.setForeground(Color.red);
+		filterLabel.setVisible(false);
+		/** displayed if all sites are taken given the current date */
+		sitesTaken = new JLabel("Sites Occupied");
+		sitesTaken.setForeground(Color.red);
+		sitesTaken.setVisible(false);
+		menubar.add(filterLabel);
+		menubar.add(sitesTaken);
+		control = new Control();
+		//this is the direct line to actually allow it to be represented
+		table = new JTable(control.getSite());
+		//used an Anonymous Inner Class for the mouse listener of my
+		//sorts, because it was a pretty cool thing to do.
+		table.getTableHeader().addMouseListener(new MouseAdapter(){
+			@Override
+			public void mouseReleased(MouseEvent e) {
+		        control.columnPressed(table.columnAtPoint(e.getPoint()));
+			}
+		});//end of that one line of code
+		frame.add(new JScrollPane(table));
+		frame.setSize(600,300);
+		frame.setVisible(true);	
+	}
+	/******************************************************************
+	 * Is a private helper class made to send the control the text
+	 * boxes of the dialog menus that appear upon checking in. All it 
+	 * does is takes whatever is in the textboxes and sends it to the
+	 * control If they pressed okay. Also is important because the 
+	 * control sends back a string as well, containing either what was
+	 * wrong with the data sent, or if it all worked and it does get
+	 * sent to the control, returns the estimated price.
+	 * @param x takes a DialogCheckInAbstract so if you were to make 
+	 * more dialogs in the future that extend that it could take
+	 * additional types as well. Used for both Tents and RVs the same.
+	 ******************************************************************/
+	private void sendControlDialogInput(DialogCheckInAbstract x){
+		String name = new String();
+		String daysStay = new String();
+		String days = new String();
+		String site = new String();
+		String more = new String();
+		name = x.txtName.getText();
+		daysStay = x.txtOccupyedOn.getText();
+		days = x.txtDaysStaying.getText();
+		site = x.txtSiteNum.getText();
+		more = x.txtAdditional.getText();
+		//the important line of code
+		JOptionPane.showMessageDialog(null, control.addSite(name, 
+				daysStay, days, site, more, x.getSiteType()));
+	}
+
+	/******************************************************************
+	 * sometimess I create a messagebox to display either
+	 * the results or an error message, based on what the control sends
+	 * back, and the control takes the parameter of a inputDialog.
+	 *****************************************************************/
+	@Override
+	public void actionPerformed(ActionEvent event) {
+		if(event.getSource() == close)
+			System.exit(0);
+		if(event.getSource() == checkInRV){
+			if(control.getFlag() == true)
+				JOptionPane.showMessageDialog(this, "Can't Check In "
+						+ "while Filtered");
+			else{
+			DialogCheckInRV checkIn = new DialogCheckInRV(this);
+			if(checkIn.getCloseStatus() == 0)
+				sendControlDialogInput(checkIn);
+			}
+		}
+		if(event.getSource() == checkInTent){
+			if(control.getFlag() == true)
+				JOptionPane.showMessageDialog(this, "Can't Check In "
+						+ "while Filtered");
+			else{
+			DialogCheckInTent checkIn = new DialogCheckInTent(this);
+			if(checkIn.getCloseStatus() == 0)
+				sendControlDialogInput(checkIn);
+			}
+		}
+		
+		if (event.getSource() == checkOut) {
+			int index = table.getSelectedRow();
+			//makes sure a row is selected
+			if (index != -1)
+				//creates a message based on a message created to be sent
+				//to the control.
+				JOptionPane.showMessageDialog(null, 
+						control.removeSite(index, JOptionPane
+								.showInputDialog("Date Leaving: ")));
+		}
+		//This section of GUI contains the most logic i believe
+		//determines if you can save or not depending on if a filter is
+		//applied, so that you can't save over your database.
+		//preferably this would be a variable manipulated in the control.
+		if(event.getSource() == saveSerial){
+			if(control.getFlag() == true){
+					JOptionPane.showMessageDialog(this, "can't"
+							                  + " save while Filtered");
+				return;
+			}
+			returnVal = chooser.showOpenDialog(this);
+		    if(returnVal == JFileChooser.APPROVE_OPTION)
+		      control.saveDatabase(chooser.getSelectedFile().getName());
+		}
+		
+		if(event.getSource() == openSerial){
+		    returnVal = chooser.showOpenDialog(this);
+		    if(returnVal == JFileChooser.APPROVE_OPTION)
+		      control.loadDatabase(chooser.getSelectedFile().getName());
+		}
+		
+		if(event.getSource() == saveText){
+			if(control.getFlag() == true){
+				JOptionPane.showMessageDialog(this, "Can't "
+						                       + "save while filtered");
+				return;
+		}
+		    returnVal = chooser.showOpenDialog(this);
+		    if(returnVal == JFileChooser.APPROVE_OPTION)
+		        control.saveAsText(chooser.getSelectedFile().getName());
+		}
+		
+		if(event.getSource() == openText){
+		    returnVal = chooser.showOpenDialog(this);
+		    if(returnVal == JFileChooser.APPROVE_OPTION)
+		      control.loadFromText(chooser.getSelectedFile().getName());
+		}
+		if(event.getSource() == filterName){
+				control.filterName(JOptionPane.showInputDialog
+						                       ("Filter to Include: "));
+		}
+		if(event.getSource() == filterDays){
+				control.filterDays(JOptionPane.showInputDialog
+						                             ("Days Staying:"));
+		}
+		if(event.getSource() == filterDate){
+			control.filterDates(JOptionPane.showInputDialog
+					                              ("Date Arriving: " ));
+		}
+		if(event.getSource() == filterSite){
+			control.filterSites(JOptionPane.showInputDialog("Site: "));
+		}
+		
+		if(event.getSource() == filterClear){
+			control.clearFilters();
+		}
+		if(event.getSource() == seeFuture){
+			String[] bigList = 
+					control.getFuture(JOptionPane.showInputDialog
+							                    ("Date :")).split("\n");
+			JOptionPane.showInputDialog(this,"Name | Site | Days",
+					"Future Site Values",2, null, bigList, "Titan");
+		}
+		sitesTaken.setVisible(control.sitesTaken());
+		filterLabel.setVisible(control.getFlag());
+	}
+}
 
