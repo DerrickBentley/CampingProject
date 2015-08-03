@@ -1,0 +1,45 @@
+package packageOne;
+
+import java.awt.BorderLayout;
+import java.awt.event.*;
+
+import javax.swing.*;
+
+public class DialogCheckInTent extends DialogCheckInAbstract implements
+                                                       ActionListener{
+	protected JTextField txtNumTenters;
+	protected JLabel lblNumTenters;
+		
+	public DialogCheckInTent(JFrame parent){
+		super(parent);
+		super.txtAdditional = new JTextField("5");
+		super.lblAdditional = new JLabel("Number of Tenters:");
+		//txtNumTenters = new JTextField("5");
+		//lblNumTenters = new JLabel("Number of Tenters:");
+		super.textPanel.add(lblAdditional);
+		super.textPanel.add(txtAdditional);
+		super.getContentPane().add(textPanel, BorderLayout.CENTER);
+		super.okButton.addActionListener(this);
+		super.cancelButton.addActionListener(this);
+		setSize(300,300);
+		setVisible(true);
+	}
+	
+	public String getSiteType(){
+		return "Tent";
+	}
+	
+
+	@Override
+	public void actionPerformed(ActionEvent event) {
+		if(event.getSource() == okButton){
+			try{
+				super.okayButton();
+			}
+			catch (Exception e){
+			}
+		}
+		dispose();
+	}
+
+}
