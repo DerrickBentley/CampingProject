@@ -1,0 +1,51 @@
+package packageOne;
+
+import java.util.Date;
+import java.util.GregorianCalendar;
+
+public class Tent extends Site {
+	private static final long serialVersionUID = 1L;
+	
+	/**Represents the number of tenters on this site */
+	private int numOfTenters;
+
+	public Tent(){
+		super();
+	}
+	
+	public Tent(String nameReserving, GregorianCalendar checkIn, int 
+			daysStaying, GregorianCalendar checkOutOn, int siteNumber,
+			int numOfTenters){
+	super(nameReserving, checkIn, daysStaying, checkOutOn, siteNumber);
+	this.numOfTenters = numOfTenters;
+	}
+	
+	/******************************************************************
+	 * Used at check in with estimated days staying to get an idea of
+	 * the cost the site will come out to.
+	 ******************************************************************/
+	@Override
+	public int getEstimatedCost(){
+		return super.TENTERCOST*numOfTenters*super.daysStaying;
+	}
+	
+	/******************************************************************
+	 * used on checkout and is the computed cost from the date they 
+	 * checked in and the actual date they are leaving.
+	 *****************************************************************/
+	@Override
+	public int getCost(){
+		Date in = super.getCheckIn().getTime();
+		Date out = super.getCheckOutOn().getTime();
+		Long diff = out.getTime() - in.getTime();
+		int days = (int)(diff/(1000*60*60*24)+1);
+		return super.TENTERCOST*numOfTenters*days;
+	}
+	public int getNumOfTenters() {
+		return numOfTenters;
+	}
+
+	public void setNumOfTenters(int numOfTenters) {
+		this.numOfTenters = numOfTenters;
+	} 
+}
