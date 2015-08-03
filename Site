@@ -1,0 +1,201 @@
+package packageOne;
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.GregorianCalendar;
+
+public class Site implements Serializable, Comparator<Site> {
+	private static final long serialVersionUID = 1L;
+	/** is the name reserving the camp ground */
+	protected String nameReserving;
+	/** is the date checking in */
+	protected GregorianCalendar checkIn;
+	/** is the estimated days stayin */
+	protected int daysStaying;
+	/** is mentioned later as the actual date checked out on */
+	protected GregorianCalendar checkOutOn;
+	/** is the site number of the campsite */
+	protected int siteNumber;
+	/** is the current market price of a RV site rental */
+	protected final int RVCOST;
+	/** is the current market price of a tent cost */
+	protected final int TENTERCOST;
+	/**Site has a static variable on which sort method i am going to **/ 
+	/**switch to in the compare to so that it can be comparable in **/
+	/**multiple different ways. There were several different ways i **/
+	/**could have implemented this feature, however i chose this way**/
+	private static enum whichSort {ONE, TWO, THREE, FOUR, ZERO};
+	private static whichSort please = whichSort.ONE;
+	/** is the variable that is often switched, to be used in reverse**/
+	/** sorts */
+	private static int varSorts = 1;
+	
+	public Site(){
+		RVCOST = 30;
+		TENTERCOST = 3;
+	}
+	
+	public Site(String nameReserving, GregorianCalendar checkIn, int
+			daysStaying, GregorianCalendar checkOutOn, int siteNumber){
+		super();
+		this.nameReserving = nameReserving;
+		this.checkIn = checkIn;
+		this.daysStaying = daysStaying;
+		this.checkOutOn = checkOutOn;
+		this.siteNumber = siteNumber;
+		RVCOST = 30;
+		TENTERCOST = 3;
+	}
+	
+	/******************************************************************
+ 	* Method made to be override, is intended to return the base 
+ 	* estimate made to customers upon checking in.
+ 	* @return serves no real applicable function
+ 	******************************************************************/
+	protected int getEstimatedCost(){
+		return -1;
+	}
+	
+	/******************************************************************
+	 * Method made to be override, is intended to return the actual 
+	 * cost of their stay.
+	 * @return Serves no real applicabl function
+	 *****************************************************************/
+	protected int getCost(){
+		return -1;
+	}
+	
+	/******************************************************************
+	 * Changes the enum variable, Which is used to determine which sort
+	 * we should use.
+	 * @param num is a number 1 - 4.
+	 *****************************************************************/
+	protected void changeEnum(int num){
+		switch (num) {
+		case 1: please = whichSort.ONE;
+		break;
+		case 2: please = whichSort.TWO;
+		break;
+		case 3: please = whichSort.THREE;
+		break;
+		case 4: please = whichSort.FOUR;
+		break;
+		case 0: please = whichSort.ZERO;
+		}
+	}
+	
+	/******************************************************************
+	 * is the implemented compare class so the sorts work. returns 
+	 * a variable I have labeled as 1, or negative that variable,
+	 * used for the reverse sorts if its already sorted. Uses a static
+	 * variable to determine which values are actually being sorted.
+	 * param o1 is the site we are comparing against
+	 * param o2 is the site we are comparing to
+	 *****************************************************************/
+	@Override
+	public int compare(Site o1, Site o2) {
+		switch(please){
+		case ZERO:return (o1.getNameReserving().compareToIgnoreCase
+				   (o2.getNameReserving()) >= 0) ? varSorts : -varSorts;
+		case ONE: return (o1.getCheckIn().compareTo(o2.getCheckIn())
+				                           >= 0) ? varSorts : -varSorts;
+		case TWO:return o1.getDaysStaying() >= o2.getDaysStaying()
+				                                 ? varSorts : -varSorts;
+		case THREE: return o1.getSiteNumber() >= o2.getSiteNumber()
+				                                 ? varSorts : -varSorts;
+		case FOUR: if (o1 instanceof RV && o2 instanceof Tent)
+					   return varSorts;
+				   if(o1 instanceof Tent && o2 instanceof RV)
+					   return -varSorts;
+				   break;
+		default:
+		return 1;
+		}
+		return 0;
+	}
+	
+	/******************************************************************
+	 * is mimicking the compare implemented function. Uses the same
+	 * static variable to determine what we are filtering by, and will
+	 * return a 1 or -1 on whether or not they meet that criteria
+	 * @param o1 is the site that has the filters
+	 * @param o2 is the site being compared to the filter
+	 * @return 1 or 2 on if they are to be removed or not
+	 ******************************************************************/
+	public int filter(Site o1, Site o2){
+		switch(please){
+		case ZERO: if(o1.getNameReserving().length() 
+				                       > o2.getNameReserving().length())
+			return -1;
+			String a = o1.getNameReserving().toLowerCase();
+			String b = o2.getNameReserving().toLowerCase();
+			return a.equals(b) || b.contains(a) ? 1 : -1;
+		case ONE: GregorianCalendar c = o1.getCheckIn();
+					GregorianCalendar d = o2.getCheckIn();
+					return d.after(c) ? 1 : -1;
+		case TWO: return o1.getDaysStaying() == o2.getDaysStaying() 
+				                                               ? 1 : -1;
+		case THREE: return o1.getSiteNumber() == o2.getSiteNumber() 
+				                                               ? 1 : -1;
+		case FOUR: return 0;
+		default: return 0;
+		}
+	}
+	
+	/**-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+	 - The following is the Getters and Setters for nameReserving, 
+	 * checkIn, daysStaying, checkOutOn, and siteNumber, with no 
+	 - modifications.
+	 -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*/
+	public String getNameReserving() {
+		return nameReserving;
+	}
+
+	public void setNameReserving(String nameReserving) {
+		this.nameReserving = nameReserving;
+	}
+
+	public GregorianCalendar getCheckIn() {
+		return checkIn;
+	}
+
+	public void setCheckIn(GregorianCalendar checkIn) {
+		this.checkIn = checkIn;
+	}
+
+	public int getDaysStaying() {
+		return daysStaying;
+	}
+
+	public void setDaysStaying(int daysStaying) {
+		this.daysStaying = daysStaying;
+	}
+
+	public GregorianCalendar getCheckOutOn() {
+		return checkOutOn;
+	}
+
+	public void setCheckOutOn(GregorianCalendar checkOutOn) {
+		this.checkOutOn = checkOutOn;
+	}
+
+	public int getSiteNumber() {
+		return siteNumber;
+	}
+
+	public void setSiteNumber(int siteNumber) {
+		this.siteNumber = siteNumber;
+	}
+
+	public int getSwitchSorts() {
+		return varSorts;
+	}
+
+	public void setSwitchSorts(int switchSorts) {
+		Site.varSorts = switchSorts;
+	}
+	public whichSort getValue(){
+		return please;
+	}
+}
