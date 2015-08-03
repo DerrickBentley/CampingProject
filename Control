@@ -3,13 +3,7 @@ package packageOne;
 import java.text.*;
 import java.util.*;
 /**********************************************************************
- * Control class was made to be more true to MVC programming, and so
- * that my GUI could be as dumb as possible so that if I were to change
- * the code here to something like a mobile app, implementing it would
- * be as easy as declaring new textboxes to call to these methods, while
- * still protecting the engine. and well ofcourse doing something other
- * than an AbstractTableModel and a JTable but we'll worry about that
- * later.
+ * Control class was made to be more true to MVC programming
  * @author bentleyd
  *********************************************************************/
 public class Control {
