@@ -1,0 +1,491 @@
+package packageOne;
+
+import java.text.*;
+import java.util.*;
+/**********************************************************************
+ * Control class was made to be more true to MVC programming, and so
+ * that my GUI could be as dumb as possible so that if I were to change
+ * the code here to something like a mobile app, implementing it would
+ * be as easy as declaring new textboxes to call to these methods, while
+ * still protecting the engine. and well ofcourse doing something other
+ * than an AbstractTableModel and a JTable but we'll worry about that
+ * later.
+ * @author bentleyd
+ *********************************************************************/
+public class Control {
+	/** actually connects and talks to the engine */
+	private SiteModel site;
+	/** is a single site which we manipulate throughout */
+	private Site unit;
+	/** is the maximum appropriate days to stay */
+	private final int MAXDAYS;
+	/** is the number of sites a camp ground has */
+	private final int MAXSITES;
+	/** is true if all numbers 0 through MAXSITES is true */
+	private final boolean ALLTAKEN;
+	/** is the business logic behind maximum number of tenters */
+	private final int MAXTENTERS;
+	/** is the maximum amps we can provide */
+	private final int MAXAMPS;
+	/** is a date format we use throughout */
+	private SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+	/** is a site we manipulate and put values in, to be used in Sites*/
+  /**filter method, using which field depending on the static variable*/
+	private Site filterValues;
+	/**tells if it is being filtered or not, only Control level deep */
+	private boolean flag;
+	
+	public Control(){
+		super();
+		site = new SiteModel();
+		unit = new Site();
+		MAXDAYS = 50;
+		MAXSITES = 5;
+		ALLTAKEN = false;
+		MAXTENTERS = 10;
+		MAXAMPS = 90;
+		filterValues = new Site();
+		df.setLenient(false);
+		flag = false;
+	}
+	
+	/******************************************************************
+	 * This method takes just raw string inputs from the GUIs dialog 
+	 * box regardless of what they put in there. Because They could have
+	 * added anything in there that can be entered into a Textbox, we 
+	 * will do the error checking and make sure whatever they put into
+	 * the dialog box can actually be made into a Site, and if it passes
+	 * everything, we'll actually add it to the site model.
+	 * @param name is hopefully a name
+	 * @param checkIn is a date in the future formatted xx/xx/xxxx
+	 * @param daysStaying is an integer in a reasonable amount of days
+	 * @param siteNum is a number not taken already, in the range of 
+	 * how many sites we actually have
+	 * @param more is additional information that will vary depending
+	 * on which subclass is trying to be created
+	 * @param type will help us determine which type of subclass it is
+	 * @return used to escape the method before anything is added to the
+	 * actual engine and is a buffer to protect the engine.
+	 *****************************************************************/
+	public String addSite(String name, String checkIn, String daysStaying,
+			String siteNum, String more, String type){
+		
+		//makes sure we have actual input where we need it
+		if(name.length() < 3)
+			return "Name must be greater than 3 characters";
+		if(checkIn.length() < 10)
+			return "Date Entered must be in format xx/xx/xxxx";
+		if(daysStaying.length()<1)
+			return "Please enter an estimated Days of stay";
+		if(siteNum.length()<1)
+			return "Please enter a Site Number";
+		//checks if name is proper
+		if(!checkName(name))
+			return "Names must contain only Alphetical Characters";
+		//checks if days staying is proper
+		if(!checkWithinRange(daysStaying, MAXDAYS))
+			return "Days Staying must be 1 - " + MAXDAYS;
+		//checks if sitenumber is proper
+		if(!checkWithinRange(siteNum, MAXSITES))
+			return "Sites must be 1 - " + MAXSITES;
+		try{
+			if(type == "Tent"){
+				if(!checkWithinRange(more, MAXTENTERS))
+					return "Tenters must be 1 - " + MAXTENTERS;
+				//instantiate as a tent
+				unit = new Tent();
+				int tenters = Integer.parseInt(more);
+				//set tenters
+				((Tent)unit).setNumOfTenters(tenters);
+			}
+		}
+		catch(Exception e){
+			return "Tenters must be in format 'x'";
+		}
+		try{
+			if(type == "RV"){
+				if(!checkWithinRange(more, MAXAMPS))
+					return "Amps must be 30, 60, or 90";
+				//instantiate as new RV
+				unit = new RV();
+				int amps = Integer.parseInt(more);
+				//sets amps
+				((RV)unit).setPower(amps);
+			}
+		}
+		catch(Exception e){
+			return "Amps must be in numerical format only";
+		}
+		Date d;
+		try{
+			//we know name is proper so we set it
+			unit.setNameReserving(name);
+			int days = Integer.parseInt(daysStaying);
+			//we know days is proper so we set it
+			unit.setDaysStaying(days);
+			int siteNumber = Integer.parseInt(siteNum);
+			//we know sitenumber is proper so we set it
+			unit.setSiteNumber(siteNumber);
+			//checks if dates given site number and the number of days
+			//staying is appropriate
+			if(!checkDateRange(checkIn, days, siteNumber))
+				return "Please verify your Check In Date";
+			d = df.parse(checkIn);		
+			GregorianCalendar opened = new GregorianCalendar();
+			opened.setTime(d);
+			//if it is appropriate we set it.
+			unit.setCheckIn(opened);
+		}
+		//if anything fails, we don't do anything to the engine.
+		catch(Exception e){
+			return "Error, Double check and Try Again please";
+		}
+		//if everything passed and we know input is good, engine changes
+		//which will fireback to the table to update.
+		site.addSite(unit);
+		return "Estimated Cost: " + unit.getEstimatedCost();
+		
+	}
+
+	/******************************************************************
+	 * Checks to make sure the date reserving is in the future, and that
+	 * if it has the same site number as another reservation, that there
+	 * is no date overlap, either if they booked beforehand and are
+	 * planning to stay into the other, or if they are booking within
+	 * that reservation plans to stay.
+	 * @param checkIn is the date we are checking, checks against all.
+	 * @param days is the number checkIn is planning on staying
+	 * @param siteNumber is which site they are trying to reserve
+	 * @return true if we deem it an acceptable date to book.
+	 *****************************************************************/
+	private boolean checkDateRange(String checkIn, int days, int 
+			  siteNumber){
+		Date d;
+		try{
+			//tries to parse the string, fails if it isnt in this format
+			d = df.parse(checkIn);	
+			GregorianCalendar opened = new GregorianCalendar();
+			opened.setTime(d);
+			GregorianCalendar please = new GregorianCalendar();
+			please.setTime(d);
+			//Sets it to the date that is the number of days they are
+			//staying away from the date they are planning to book it.
+			please.add(Calendar.DAY_OF_MONTH, days-1);
+			//if they are planning on arriving before today, its wrong
+			long now = Calendar.getInstance().getTimeInMillis();
+			//allows it to check so you cant reserve 1 day before now
+			//otherwise you cant check in before Now, but the seconds
+			//throw it off.
+			int nowDayBefore = (int) ((now)/(1000*60*60*24)-1);
+			Date nowCheck = new Date();
+			nowCheck.setTime(nowDayBefore*1000*60*60*24);
+			if(opened.before(nowCheck))
+					return false;
+			//comparing it to every other reservation we currently have.
+			for(int i = 0; i < site.getRowCount(); i++){
+				//if the site numbers are the same is the important part
+				if (site.getSite(i).getSiteNumber() == siteNumber){
+					GregorianCalendar temp = site.getSite(i).getCheckIn();
+					GregorianCalendar tempTwo = temp;
+					//if they are planning to arrive before another
+					//reservation, however don't plan to leave before
+					//they arrive, then we won't book it.
+					if(opened.before(temp) && !please.before(temp)){
+						return false;
+					}
+					//also can't be on the same day, we'll say they have
+					//time to leave if they book it, and we may need to
+					//do preparing
+					if(opened.equals(temp)){
+						return false;
+					}
+					//tempTwo becomes the date of the reservation we are
+					//checking against and is the date when they leave
+					tempTwo.add(Calendar.DAY_OF_MONTH, site.getSite(i)
+							                       .getDaysStaying());
+					//if the reserver plans on arriving before a site
+					//plans to leave, however they dont plan on leaving
+					//before they show up then its wrong as well
+					if(opened.before(tempTwo) && !please.before(temp)){
+						tempTwo.add(Calendar.DAY_OF_MONTH, 
+								   -site.getSite(i).getDaysStaying());
+						return false;
+					}
+					//the calendar.add method is a void type that does
+					//the action, I was having an issue where the sites
+					//we looped through were aliased in the code above
+					//and were being added the days staying to get a 
+					//calendar date but were never being reverted back.
+					tempTwo.add(Calendar.DAY_OF_MONTH, -site.getSite(i)
+							                       .getDaysStaying());
+				}
+			}
+		}
+		//anything goes wrong, then something is wrong.
+		catch(Exception e){
+			return false;
+		}
+		//date is acceptable
+		return true;
+	}
+	
+	/******************************************************************
+	 * private helper method to determine if the name given is all 
+	 * alphabetical characters, though it can include spaces.
+	 * @param name takes the name reserving.
+	 * @return true if its possible its a valid name.
+	 ******************************************************************/
+	private boolean checkName(String name){
+		try{
+		if(name.length() == 0)
+			return false;
+		//checks if the characters in Name are all alphabet characters
+		for(int i = 0; i < name.length(); i++){
+			//if one isn't a letter, We'll assume they did it wrong
+			if (!Character.isLetter(name.charAt(i)))
+				//assuming it isnt a space. Spaces are fine.
+				if(!name.substring(i,i+1).equals(" "))
+					//leaves before site is added to the actual engine.
+					return false;
+				}
+		//name is acceptable
+		return true;
+		}
+		catch (Exception e){
+			return false;
+		}
+	}
+	/******************************************************************
+	 * private helper method to determine if the variable given, given
+	 * that it is supposed to be an integer, is actually a number, and
+	 * that it is reasonable. IE not below 0, and not above a given
+	 * value. Used for DaysStaying, and SiteNumber.
+	 * @param var the textbox input that is supposed to be Integer.
+	 * @param absolute The maximum allowed reasonable range.
+	 * @return true if its greater than 0, and less than Absolute
+	 *****************************************************************/
+	private boolean checkWithinRange(String var, int absolute){
+		int x;
+		//makes sure its an integer
+		try{
+			x = Integer.parseInt(var);
+		}
+		catch(NumberFormatException e){
+			return false;
+		}
+		//if its below 1 or if it is greater than the finals i have set
+		//up, the finals are maximum capacities.
+		if( x > absolute || x < 1)
+			return false;
+		return true;
+	}
+	
+	/******************************************************************
+	 * takes input from a inputDialog in the form of a string, takes any
+	 * input and then checks it against whether or not its a correct date
+	 * as well as if it is after the date checked in. Then converts both
+	 * returns a string to the GUI to be put back into their message,
+	 * either that it had an error and what went wrong, or with a
+	 * Appropriate price.
+	 * @param x is the index on the table and in the sitemodel.
+	 * @param checkOut is whatever the user input, the leaving date.
+	 * @return a String to populate the GUI message, indicating either
+	 * error or success.
+	 *****************************************************************/
+	public String removeSite(int x, String checkOut){
+		Date d;
+		try{
+			d = df.parse(checkOut);
+			GregorianCalendar leaving = new GregorianCalendar();
+			leaving.setTime(d);
+			//makes sure they arnt putting in a past date.
+			if(leaving.before(site.getSite(x).getCheckIn()))
+				return "Can't leave before you check in";
+			//sets it to the site.
+			site.getSite(x).setCheckOutOn(leaving);
+			//have to do this because if i removed it, then returned
+			//later the total cost + site.getSite(x) it would be a
+			//different site
+			int cost = site.getSite(x).getCost();
+			//if it actually worked, update engine, fires back.
+			site.removeSite(x);
+			//confirms with user in GUI.
+			return "Total Cost: " + cost;
+		}
+		catch(ParseException e){
+			//if it had an error parsing the information
+			return "Must be in format xx/xx/xxxx";
+		}
+		catch(Exception e){
+			return "no entry";
+		}
+	}
+	
+	/******************************************************************
+	 * Is passed what column was pressed, then sets the static variable
+	 * to do the determine which sorting to do, as well as change the
+	 * static variable to the opposite of what it currently is, to 
+	 * either sort forwards or backwards.
+	 * @param colIndex is which column was pressed.
+	 *****************************************************************/
+	public void columnPressed(int colIndex){
+		switch(colIndex){
+		case 0 : unit.changeEnum(0);
+		unit.setSwitchSorts(-unit.getSwitchSorts());
+		site.sortSites();
+		break;
+		case 1: unit.changeEnum(1);
+		unit.setSwitchSorts(-unit.getSwitchSorts());
+		site.sortSites();
+		break;
+		case 2: unit.changeEnum(2);
+		unit.setSwitchSorts(-unit.getSwitchSorts());
+		site.sortSites();
+		break;
+		case 3: unit.changeEnum(3);
+		unit.setSwitchSorts(-unit.getSwitchSorts());
+		site.sortSites();
+		break;
+		case 4: unit.changeEnum(4);
+		unit.setSwitchSorts(-unit.getSwitchSorts());
+		site.sortSites();
+		break;
+		}
+	}
+	
+	/******************************************************************
+	 * Checks to make sure name was valid, and if it is valid, we add
+	 * it to our filter values, use the static variable to tell it that
+	 * we are filtering by name, set Flag to true so that we declare we 
+	 * have a filter currently, and then filters the data.
+	 * @param name is any String that you want included in the table,
+	 * all others that do not contain it are removed.
+	 *****************************************************************/
+	public void filterName(String name){
+		if(checkName(name)){
+			filterValues.setNameReserving(name);
+			columnPressed(0);
+			flag = true;
+			site.filter(filterValues);
+		}
+	}
+	/******************************************************************
+	 * checks to make sure Days is a proper integer input. if it is, 
+	 * switches the static variable to let it know to filter by days,
+	 * sets the flag to true so that we know we have a filter, and 
+	 * removes all values that days staying arnt equal to days.
+	 * @param days is an integer valued 1 to MAXDAYS
+	 *****************************************************************/
+	public void filterDays(String days){
+		try{
+			if(days.length() < 1)
+				return;
+			if(checkWithinRange(days, MAXDAYS)){
+				int x = Integer.parseInt(days);
+				columnPressed(2);
+				filterValues.setDaysStaying(x);
+				flag = true;
+				site.filter(filterValues);
+			}
+		} catch (Exception e){
+		}
+		
+	}
+	
+	/******************************************************************
+	 * Tries to parse it so that it is a correct date and in the format,
+	 * then it will filter by Dates After the one given. Also sets
+	 * filtered to true if it works
+	 * @param Date
+	 *****************************************************************/
+	public void filterDates(String Date){
+		Date d;
+		try{
+			d = df.parse(Date);
+			GregorianCalendar leaving = new GregorianCalendar();
+			leaving.setTime(d);
+			columnPressed(1);
+			filterValues.setCheckIn(leaving);
+			flag = true;
+			site.filter(filterValues);
+		}
+		catch(Exception e){
+			return;
+		}
+	}
+	/******************************************************************
+	 * Takes the string and checks if its a valid site, if it is it is
+	 * sent to our filter variable, the filter we change the static 
+	 * variable for our filter or compares to use, filter it
+	 * @param Sites is a string hopefully representing which site
+	 *****************************************************************/
+	public void filterSites(String Sites){
+		if(checkWithinRange(Sites, MAXSITES)){
+			int x = Integer.parseInt(Sites);
+			columnPressed(3);
+			filterValues.setSiteNumber(x);
+			flag = true;
+			site.filter(filterValues);
+		}
+	}
+	
+	public void clearFilters(){
+		flag = false;
+		filterValues = new Site();
+		site.resetFilters();
+	}
+	/******************************************************************
+	 * checks to make sure the string is an appropriate date before 
+	 * letting it get to our engine to get the future days staying.
+	 * @param futureTime is a date in the future.
+	 * @return either the engines string, or an error.
+	 ******************************************************************/
+	public String getFuture(String futureTime){
+		Date d;
+		try{
+			d = df.parse(futureTime);
+			GregorianCalendar time = new GregorianCalendar();
+			time.setTime(d);
+			return site.getFuture(time);
+		}
+		catch(Exception e){
+			return "please enter a date in format 'xx/xx/xxxx'";
+		}
+	}
+	/**-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+	 * these methods carry straight over to the model, and have no
+	 * business logic attached
+	 * @param x file location
+	 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*/
+	public void saveDatabase(String x){
+		site.saveDatabase(x);
+	}
+	
+	public void loadDatabase(String x){
+		site.loadDatabase(x);
+	}
+	
+	public void saveAsText(String x){
+		site.saveAsText(x);
+	}
+
+	public void loadFromText(String x){
+		site.loadFromText(x);
+	}
+
+	public SiteModel getSite() {
+		return site;
+	}
+
+	public void setSite(SiteModel site) {
+		this.site = site;
+	}
+	
+	public boolean getFlag(){
+		return flag;
+	}
+	
+	public boolean sitesTaken(){
+		return site.sitesTaken();
+	}
+}
