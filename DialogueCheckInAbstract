@@ -1,0 +1,78 @@
+package packageOne;
+import java.awt.*;
+import javax.swing.*;
+
+public abstract class DialogCheckInAbstract extends JDialog {
+	protected JTextField txtName;
+	protected JTextField txtOccupyedOn;
+	protected JTextField txtDaysStaying;
+	protected JTextField txtSiteNum;
+	protected JTextField txtAdditional;
+	protected JLabel lblAdditional;
+	protected JButton okButton;
+	protected JButton cancelButton;
+	protected int closeStatus;
+	
+	protected JPanel textPanel;
+	
+	public static final int OK = 0;
+	public static final int CANCEL = 1;
+	
+	//forces future dialogs created to verify what type of dialog its for
+	protected abstract String getSiteType();
+	
+	/******************************************************************
+	 * Sets up everything future dialogs created will need for all the
+	 * basic site information, and includes an extra label and textbox
+	 * for additional use as well. Does everything for the GUI but
+	 * actually show it.
+	 * @param parent is passed down from the GUI, to this subclass, to
+	 * this super class, so it has the frame to put it in.
+	 *****************************************************************/
+	protected DialogCheckInAbstract(JFrame parent){
+		super(parent, true);
+		closeStatus = CANCEL;
+		setSize(400,200);
+		setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+		textPanel = new JPanel();
+		textPanel.setLayout(new GridLayout(6,2));
+		textPanel.add(new JLabel("Name Reserving"));
+		txtName = new JTextField("Spencer Please");
+		textPanel.add(txtName);
+		
+		textPanel.add(new JLabel("Day Reserving"));
+		txtOccupyedOn = new JTextField("03/17/2015");
+		textPanel.add(txtOccupyedOn);
+		
+		textPanel.add(new JLabel("Days Staying"));
+		txtDaysStaying = new JTextField("3");
+		textPanel.add(txtDaysStaying);
+		
+		textPanel.add(new JLabel("Site Number"));
+		txtSiteNum = new JTextField("4");
+		textPanel.add(txtSiteNum);
+		
+		okButton = new JButton("ok");
+		cancelButton = new JButton("cancel");
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.add(okButton);
+		buttonPanel.add(cancelButton);
+		getContentPane().add(buttonPanel, BorderLayout.SOUTH);
+	
+	}
+	
+	/******************************************************************
+	 * Originally did a lot more when the GUI was handling and sending
+	 * and manipulating a site, but got narrowed when i simplified it.
+	 ******************************************************************/
+	public void okayButton(){
+		closeStatus = OK;
+	}
+	/******************************************************************
+	 * default is that they havnt pressed OK, is OK if they press it
+	 * @return 0 or 1 on which button they pressed.
+	 *****************************************************************/
+	public int getCloseStatus(){
+		return closeStatus;
+	}
+}
