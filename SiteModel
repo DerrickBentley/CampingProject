@@ -1,0 +1,370 @@
+package packageOne;
+
+import java.io.*;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Scanner;
+import java.util.Stack;
+
+
+import javax.swing.table.AbstractTableModel;
+
+public class SiteModel extends AbstractTableModel {
+	private static final long serialVersionUID = 1L;
+	/** is the categories and columns of the table */
+	private String[] columnHeaders = {"Name Reserving", "Checked-In",
+			"Days Staying", "Site Number", "Tent/RV Info"};
+	/** holds all the data to be put into the table */
+	private ArrayList<Site> siteInformation;
+	/** holds the data when we filter */
+	private Stack<Site> holding;
+	/** is the standard date format used throughout the program */
+	private SimpleDateFormat df = new SimpleDateFormat("MM/dd/yyyy");
+	/** is the time used to compare when all sites are taken */
+	private GregorianCalendar time;
+	
+	public SiteModel(){
+		super();
+		siteInformation = new ArrayList<Site>();
+		holding = new Stack<Site>();
+		/** time is set to now. */
+		time = (GregorianCalendar) new GregorianCalendar().getInstance();
+	}
+	
+	/******************************************************************
+	 * Collections takes an class that is comparable, of which Site is.
+	 * Then the code is already written to use my implemented method
+	 * to sort it based on the values it returns per each site.
+	 *****************************************************************/
+	protected void sortSites(){
+		Collections.sort(siteInformation, new Site());
+		fireTableRowsInserted(0, siteInformation.size());
+	}
+	
+	/******************************************************************
+	 * removes all reservations from the stack back onto the arraylist
+	 *****************************************************************/
+	protected void resetFilters(){
+		while(holding.size() > 0){
+			siteInformation.add(holding.pop());
+		}
+		fireTableRowsInserted(0, siteInformation.size());
+	}
+	
+	/******************************************************************
+	 * The control passes this engine a Site, and it filters based on 
+	 * the filter class of each site, using the static variable to 
+	 * determine which filter we are applying and taking from the
+	 * variable to compare against. This single method is used for all
+	 * filters.
+	 * If we reset filters before every filter, they wont be able to 
+	 * have overlapping filters, but in this implementation we do.
+	 * @param o1 is the filters we are applying.
+	 ******************************************************************/
+	protected void filter(Site o1){
+		//resetFilters();
+		for(int i = 0; i < siteInformation.size(); i++){
+			if(siteInformation.get(i).filter(o1,
+					                      siteInformation.get(i)) < 0){
+				holding.push(siteInformation.get(i));
+				siteInformation.remove(i);
+				//because its removed, everything is shifted up, so i--
+				//is still the next value. Seriously.
+				i --;
+			}
+		}
+		fireTableRowsInserted(0, siteInformation.size());
+	}
+	/******************************************************************
+	 * Because abstractTableModel needs to be versatile to fit all
+	 * sorts of different data structures, we must override this method
+	 * with what we are using for our column lengths, which is our
+	 * columnheaders object we created.
+	 *****************************************************************/
+	@Override
+	public int getColumnCount() {
+		return columnHeaders.length;
+	}
+
+	/******************************************************************
+	 * Because abstractTableModel needs to know how big to make the table
+	 * they require us to get a row count but didn't know what methods
+	 * we would use to populate the table, so we return our arraylist's
+	 * size in this particular case.
+	 ******************************************************************/
+	@Override
+	public int getRowCount() {
+		return siteInformation.size();
+	}
+
+	/******************************************************************
+	 * They also require that we have a way of converting our structure
+	 * into their columns and rows. so for every row we switch through
+	 * all the columns and return Site in the formats that we want each
+	 * to be in for the table.
+	 *****************************************************************/
+	@Override
+	public Object getValueAt(int rowIndex, int columnIndex) {
+		switch(columnIndex){
+		case 0:
+			return (siteInformation.get(rowIndex).getNameReserving());
+		case 1:
+			return df.format(siteInformation.get(rowIndex).getCheckIn().
+							getTime());
+		case 2: 
+			return (siteInformation.get(rowIndex).getDaysStaying() 
+					+ " days");
+		case 3:
+			return ("" + siteInformation.get(rowIndex).getSiteNumber());
+		case 4:
+			if(siteInformation.get(rowIndex) instanceof Tent)
+				return ("Tenters: " + ((Tent) siteInformation.get
+						(rowIndex)).getNumOfTenters());
+			else
+				return("Amps: " + ((RV)siteInformation.get
+						(rowIndex)).getPower());
+		default:
+			return null;
+		}
+	}
+	/******************************************************************
+	 * The method they use to grab any particular columnHeader that we
+	 * needed to make match our Array of columnheaders.
+	 ******************************************************************/
+	 @Override
+	public String getColumnName(int col) {
+		return columnHeaders[col];
+	}
+	/******************************************************************
+	 * Is the single method to both remove the given site from our
+	 * arrayList of information as well as to update the table GUI.
+	 * @param siteNumber is the site to be removed.
+	 *****************************************************************/
+	protected void removeSite(int siteNumber){
+		siteInformation.remove(siteNumber);
+		fireTableRowsDeleted(0, siteInformation.size());
+	}
+	 /*****************************************************************
+	  * is the single method to both add a site to our arrayList of
+	  * Information as well as update the table GUI.
+	  * @param unit is the site to be added.
+	  ****************************************************************/
+	 protected void addSite(Site unit){
+		 siteInformation.add(unit);
+		 fireTableRowsInserted(0, siteInformation.size());
+	 }
+	 /*****************************************************************
+	  * Grabs a site from the arraylist of information and returns it.
+	  * @param site is which indexed site we want returned
+	  * @return is the actual site
+	  ****************************************************************/
+	 protected Site getSite(int site){
+		 return siteInformation.get(site);
+	 }
+	 
+	 /*****************************************************************
+	  * probably the least efficient thing I have ever created, however
+	  * other implementations that were simpler wern't working fully 
+	  * for me, so I simplified it into something I knew to work.
+	  * @return true if all sites are taken.
+	  *****************************************************************/
+	 protected boolean sitesTaken(){
+		 boolean one = false;
+		 boolean two = false;
+		 boolean three = false;
+		 boolean four = false;
+		 boolean five = false;
+		 for(int i = 0; i < siteInformation.size(); i++){
+			 GregorianCalendar a = siteInformation.get(i).getCheckIn();
+			 if(a.before(time)){
+				 Site temp = siteInformation.get(i);
+				 if(temp.getSiteNumber() == 1)
+					 one = true;
+				 if(temp.getSiteNumber() == 2)
+					 two = true;
+				 if(temp.getSiteNumber() == 3)
+					 three = true;
+				 if(temp.getSiteNumber() == 4)
+					 four = true;
+				 if(temp.getSiteNumber() == 5)
+					 five = true;
+			 }
+		 }
+		 return one && two && three && four && five;
+	 }
+	 
+	 /*****************************************************************
+	  * returns a giant String of the database, followed by the site
+	  * number, and if the given time is past their check in date, how
+	  * many days after that they would have stayed if they were all
+	  * checked in still. Step 11.
+	  * @param time is a date in the future we want to look at
+	  * @return a big string.
+	  ****************************************************************/
+	 protected String getFuture(GregorianCalendar time){
+		 String result = "";
+		 for(int i = 0; i < siteInformation.size(); i++){
+			 result += siteInformation.get(i).getNameReserving() 
+					                                          + "  |  ";
+			 result += siteInformation.get(i).getSiteNumber() + "  |  ";
+			 if(siteInformation.get(i).getCheckIn().before(time)){
+				 long tempTime = siteInformation.get(i).getCheckIn()
+						                             .getTimeInMillis();
+				 long tempTime2 = time.getTimeInMillis();
+				 int difference = (int)((tempTime - tempTime2)
+						                              /(1000*60*60*24));
+				 int days = siteInformation.get(i).getDaysStaying() 
+						                                   + difference;
+				 result += days + "\n";
+			 }
+			 else
+			 result += siteInformation.get(i).getDaysStaying() + "\n";
+		 }
+		 return result;
+	 }
+
+	 /*****************************************************************
+	  * writes our arrayList into a serialized file for our keeping.
+	  * @param filename is the location to be saved
+	  ****************************************************************/
+	public void saveDatabase(String filename) {
+		try {
+			FileOutputStream fos = new FileOutputStream(filename);
+			ObjectOutputStream os = new ObjectOutputStream(fos);
+			os.writeObject(siteInformation);
+			os.close();
+			} 
+		catch (IOException ex) {
+		}
+	}
+	/******************************************************************
+	 * loads a serialized file into our arrayList from a stored
+	 * database.
+	 * @param filename is the location we are loading from.
+	 *****************************************************************/
+	public void loadDatabase(String filename) {
+		try {
+			FileInputStream fis = new FileInputStream(filename);
+			ObjectInputStream is = new ObjectInputStream(fis);
+			siteInformation = (ArrayList<Site>) is.readObject();
+			fireTableRowsInserted(0, siteInformation.size() - 1);
+			is.close();
+		} catch (Exception ex) {
+		}
+	}
+	
+	/******************************************************************
+	 * saves our arrayList of information in the format of writing it to
+	 * a textFile. First by declaring the size, then a newline for the
+	 * class Name, Date checked in, name reserving, site number, days 
+	 * staying, and the RV or Tents additional information. 
+	 * @param filename is the location to save it.
+	 * @return true if it worked or false if it did not.
+	 ******************************************************************/
+	public boolean saveAsText(String filename) {
+		if (filename.equals("")) {
+			return false;
+		}
+
+		try {
+			PrintWriter out = new PrintWriter(new BufferedWriter(
+					new FileWriter(filename)));
+			//writes size of sites information
+			out.println(siteInformation.size());
+			for (int i = 0; i < siteInformation.size(); i++) {
+				Site unit = siteInformation.get(i);
+				//writes the classes name
+				out.println(unit.getClass().getName());
+				//writes the checked in date
+				out.println(df.format(unit.getCheckIn().getTime()));
+				//writes the name reserving
+				out.println(unit.getNameReserving());
+				//writes the site number
+				out.println(unit.getSiteNumber());
+				//writes days staying
+				out.println(unit.getDaysStaying());
+				if (unit instanceof RV) 
+					//either writes the RVs Power
+					out.println(((RV) unit).getPower());
+				else 
+					//or the Tents population
+					out.println(((Tent) unit).getNumOfTenters());
+
+			}
+			out.close();
+			//if everything worked returns true
+			return true;
+		} catch (IOException ex) {
+			return false;
+		}
+	}
+	/******************************************************************
+	 * takes a textfile in the same format we save our text databases
+	 * and loads it back into site objects to be stored back into
+	 * our arraylist and then updates the table when they are all back.
+	 * @param filename
+	 *****************************************************************/
+	public void loadFromText(String filename) {
+		//clears the table entirely
+		siteInformation.clear();
+		//tells the GUI the tables is cleared so it updates
+		fireTableRowsDeleted( 0, siteInformation.size());
+
+		try {
+			//opens a scanner for the file we saved it as
+			Scanner scanner = new Scanner(new File(filename));
+			// should clear the arrayList and screen.... 
+			//grabs the first line printed, the size of the collection
+			int count = Integer.parseInt(scanner.nextLine().trim());
+			//for the entire collection size
+			for (int i = 0; i < count; i++) {
+				//grabs the class name
+				String type = scanner.nextLine().trim();
+				GregorianCalendar checkedIn = null;
+				try {
+					DateFormat formatter = new SimpleDateFormat
+							                             ("MM/dd/yyyy");
+					//grabs the checked in date
+					Date date = formatter.parse(scanner.nextLine()
+							                                   .trim());
+					checkedIn = new GregorianCalendar();
+					checkedIn.setTime(date);
+				} catch (ParseException ex) {
+					ex.printStackTrace();
+				}
+				//grabs the name reserving
+				String nameReserving = scanner.nextLine().trim();
+				//grabs the site number
+				int siteNumber = Integer.parseInt(scanner.nextLine()
+						                                       .trim());
+				//grabs number of days staying
+				int daysStaying = Integer.parseInt(scanner.nextLine()
+						                                       .trim());
+				//grabs either the power or tents, both integers.
+				int powerTents = Integer.parseInt(scanner.nextLine()
+						                                       .trim());
+				Site unit;
+				if (type.contains("RV")) {
+					unit = new RV(nameReserving, checkedIn,
+								                      daysStaying, null,
+								                siteNumber, powerTents);
+
+				} else {
+					unit = new Tent(nameReserving, checkedIn,
+							daysStaying, null, siteNumber, powerTents);
+				}
+				siteInformation.add(unit);
+				fireTableRowsInserted(siteInformation.size() - 1,
+						siteInformation.size() - 1);
+			}
+			scanner.close();
+		} catch (Exception ex) {
+		}
+	}
+
+}
